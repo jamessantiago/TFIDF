@@ -13,29 +13,36 @@ namespace TFIDFExample
             // Some example documents.
             string[] documents =
             {
-                "The sun in the sky is bright.",
-                "We can see the shining sun, the bright sun."
+                "My name is James",
+                "James is the best in the world",
+                "I sure do love James"
             };
 
             // Apply TF*IDF to the documents and get the resulting vectors.
-            double[][] inputs = TFIDF.Transform(documents, 0);
+            var inputs = TFIDF.Transform(documents, 0);
             inputs = TFIDF.Normalize(inputs);
 
             // Display the output.
-            for (int index = 0; index < inputs.Length; index++)
+            for (int index = 0; index < inputs.Count; index++)
             {
                 Console.WriteLine(documents[index]);
 
-                foreach (double value in inputs[index])
+                foreach (var value in inputs[index])
                 {
-                    Console.Write(value + ", ");
+                    Console.Write(value.Key + ":" + value.Value + ", ");
                 }
 
                 Console.WriteLine("\n");
             }
 
-            Console.WriteLine("Press any key ..");
-            Console.ReadKey();
+            Console.WriteLine("ranking");
+
+            foreach (var term in TFIDF.GetRanking(inputs).OrderBy(d => d.Value))
+            {
+                Console.WriteLine(term.Key + " - " + term.Value);
+            }
+
+            Console.WriteLine("\n");
         }
     }
 }

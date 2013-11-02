@@ -49,7 +49,7 @@ namespace TFIDFExample
         /// <param name="documents">string[]</param>
         /// <param name="vocabularyThreshold">Minimum number of occurences of the term within all documents</param>
         /// <returns>double[][]</returns>
-        public static double[][] Transform(string[] documents, int vocabularyThreshold = 3)
+        public static List<Dictionary<string, double>> Transform(string[] documents, int vocabularyThreshold = 3)
         {
             List<List<string>> stemmedDocs;
             List<string> vocabulary;
@@ -77,13 +77,13 @@ namespace TFIDFExample
         /// <param name="stemmedDocs">List of List of string</param>
         /// <param name="vocabularyIDF">Dictionary of string, double (term, IDF)</param>
         /// <returns>double[][]</returns>
-        private static double[][] TransformToTFIDFVectors(List<List<string>> stemmedDocs, Dictionary<string, double> vocabularyIDF)
+        private static List<Dictionary<string, double>> TransformToTFIDFVectors(List<List<string>> stemmedDocs, Dictionary<string, double> vocabularyIDF)
         {
             // Transform each document into a vector of tfidf values.
-            List<List<double>> vectors = new List<List<double>>();
+            List<Dictionary<string, double>> vectors = new List<Dictionary<string, double>>();
             foreach (var doc in stemmedDocs)
             {
-                List<double> vector = new List<double>();
+                Dictionary<string, double> vector = new Dictionary<string, double>();
 
                 foreach (var vocab in vocabularyIDF)
                 {
@@ -91,13 +91,13 @@ namespace TFIDFExample
                     double tf = doc.Where(d => d == vocab.Key).Count();
                     double tfidf = tf * vocab.Value;
 
-                    vector.Add(tfidf);
+                    vector.Add(vocab.Key, tfidf);
                 }
 
                 vectors.Add(vector);
             }
 
-            return vectors.Select(v => v.ToArray()).ToArray();
+            return vectors;
         }
 
         /// <summary>
@@ -106,17 +106,17 @@ namespace TFIDFExample
         /// </summary>
         /// <param name="vectors">double[][]</param>
         /// <returns>double[][]</returns>
-        public static double[][] Normalize(double[][] vectors)
+        public static List<Dictionary<string, double>> Normalize(List<Dictionary<string, double>> vectors)
         {
             // Normalize the vectors using L2-Norm.
-            List<double[]> normalizedVectors = new List<double[]>();
+            List<Dictionary<string, double>> normalizedVectors = new List<Dictionary<string, double>>();
             foreach (var vector in vectors)
             {
                 var normalized = Normalize(vector);
                 normalizedVectors.Add(normalized);
             }
 
-            return normalizedVectors.ToArray();
+            return normalizedVectors;
         }
 
         /// <summary>
@@ -125,12 +125,12 @@ namespace TFIDFExample
         /// </summary>
         /// <param name="vectors">double[][]</param>
         /// <returns>double[][]</returns>
-        public static double[] Normalize(double[] vector)
+        public static Dictionary<string, double> Normalize(Dictionary<string, double> vector)
         {
-            List<double> result = new List<double>();
+            Dictionary<string, double> result = new Dictionary<string, double>();
 
             double sumSquared = 0;
-            foreach (var value in vector)
+            foreach (var value in vector.Values)
             {
                 sumSquared += value * value;
             }
@@ -140,10 +140,10 @@ namespace TFIDFExample
             foreach (var value in vector)
             {
                 // L2-norm: Xi = Xi / Sqrt(X0^2 + X1^2 + .. + Xn^2)
-                result.Add(value / SqrtSumSquared);
+                result.Add(value.Key, value.Value / SqrtSumSquared);
             }
 
-            return result.ToArray();
+            return result;
         }
 
         /// <summary>
@@ -172,6 +172,25 @@ namespace TFIDFExample
                 BinaryFormatter formatter = new BinaryFormatter();
                 _vocabularyIDF = (Dictionary<string, double>)formatter.Deserialize(fs);
             }
+        }
+
+        public static Dictionary<string, double> GetRanking(List<Dictionary<string, double>> data)
+        {
+            Dictionary<string, double> results = new Dictionary<string, double>();
+
+            foreach (var dataset in data)
+            {
+                foreach (var term in dataset)
+                {
+                    if (!results.ContainsKey(term.Key))
+                        results.Add(term.Key, term.Value);
+                    else
+                    {
+                        results[term.Key] = Math.Min(results[term.Key], term.Value);
+                    }
+                }
+            }
+            return results;
         }
 
         #region Private Helpers
@@ -250,6 +269,7 @@ namespace TFIDFExample
 
             return vocabulary;
         }
+
 
         /// <summary>
         /// Tokenizes a string, returning its list of words.
